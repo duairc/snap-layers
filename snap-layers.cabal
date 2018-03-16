@@ -1,0 +1,44 @@
+name:           snap-layers
+version:        0.1
+synopsis:       Orphan layers instances for snap
+license:        MPL-2.0
+license-file:   LICENSE
+author:         Shane O'Brien
+maintainer:     shane@duairc.com
+stability:      Experimental
+category:       Type
+cabal-version:  >= 1.6
+build-type:     Simple
+homepage:       https://github.com/duairc/snap-layers
+bug-reports:    https://github.com/duairc/snap-layers/issues
+
+extra-source-files:
+  LICENSE
+
+library
+  hs-source-dirs:
+    src
+
+  include-dirs:
+    include
+
+  exposed-modules:
+    Snap.Layers
+
+  build-depends:
+    base > 4 && < 6,
+    layers >= 1.0 && < 2,
+    lens >= 3.7.6 && < 5,
+    monad-control >= 0.3 && < 2,
+    snap >= 1.0 && < 2,
+    snap-core >= 1.0 && < 2,
+    transformers >= 0.4 && < 1
+
+  ghc-options: -Wall
+
+  if impl(ghc >= 7.10)
+    cpp-options: -DOverlapPragma -DOverlappingInstances=NoImplicitParams
+
+source-repository head
+  type:     git
+  location: https://github.com/duairc/snap-layers.git
