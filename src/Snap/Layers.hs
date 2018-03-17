@@ -37,7 +37,6 @@ import           Unsafe.Coerce (unsafeCoerce)
 import           Control.Monad.Lift
 import           Control.Monad.Lift.IO (controlIO, hoistIO)
 import           Control.Monad.Lift.Base (MonadBase)
-import           Control.Monad.Lift.Top (liftT)
 import           Monad.Abort (MonadAbort, abort)
 import           Monad.Mask (MonadMask, getMaskingState, setMaskingState)
 import           Monad.Reader (ask)
@@ -50,16 +49,12 @@ import           Monad.Try (MonadTry, mtry)
 import           Control.Lens.Lens (ALens', (^#), storing)
 
 
--- monad-control -------------------------------------------------------------
-import           Control.Monad.Trans.Control (MonadBaseControl)
-
-
 -- snap ----------------------------------------------------------------------
-import           Snap.Snaplet (Handler, Snaplet)
+import           Snap.Snaplet (Handler, Initializer, Snaplet)
 
 
 -- snap-core -----------------------------------------------------------------
-import           Snap.Core (Snap, MonadSnap, liftSnap)
+import           Snap.Core (Snap, liftSnap)
 import qualified Snap.Internal.Core as I
 
 
@@ -219,6 +214,16 @@ instance MonadTry Snap where
         from' = from1 . SnapT
         to' m = let SnapT m' = to1 m in m'
     {-# INLINE mtry #-}
+
+
+------------------------------------------------------------------------------
+instance MonadInner IO (Initializer b v) where
+    liftI = liftIO
+    {-# INLINE liftI #-}
+
+
+------------------------------------------------------------------------------
+instance MonadBase (Initializer b v) (Initializer b v)
 
 
 ------------------------------------------------------------------------------
@@ -383,19 +388,6 @@ instance MonadTry (Handler b v) where
         from' = from1 . HandlerT
         to' m = let HandlerT m' = to1 m in m'
     {-# INLINE mtry #-}
-
-
-------------------------------------------------------------------------------
-instance __OVERLAPPABLE__
-    ( MonadSnap m, MonadInner m (t m), tm ~ t m
-    , Alternative (t m), MonadPlus (t m)
-    , MonadIO (t m), MonadBaseControl IO (t m)
-    )
-  =>
-    MonadSnap tm
-  where
-    liftSnap = liftT . liftSnap
-    {-# INLINE liftSnap #-}
 
 
 ------------------------------------------------------------------------------

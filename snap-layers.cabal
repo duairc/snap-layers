@@ -23,15 +23,26 @@ library
     include
 
   exposed-modules:
+    Control.Monad.Lift.Handler
+    Control.Monad.Lift.Initializer
+    Control.Monad.Lift.Snap
+    Monad.Snaplet
+    Snap.Core.Lifted
+    Snap.Snaplet.Lifted
     Snap.Layers
 
   build-depends:
     base > 4 && < 6,
+    bytestring,
+    case-insensitive,
+    configurator,
+    io-streams,
     layers >= 1.0 && < 2,
     lens >= 3.7.6 && < 5,
-    monad-control >= 0.3 && < 2,
+    readable,
     snap >= 1.0 && < 2,
     snap-core >= 1.0 && < 2,
+    text,
     transformers >= 0.4 && < 1
 
   ghc-options: -Wall
