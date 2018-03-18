@@ -11,7 +11,6 @@ cabal-version:  >= 1.6
 build-type:     Simple
 homepage:       https://github.com/duairc/snap-layers
 bug-reports:    https://github.com/duairc/snap-layers/issues
-
 extra-source-files:
   LICENSE
 
@@ -39,6 +38,8 @@ library
     io-streams,
     layers >= 1.0 && < 2,
     lens >= 3.7.6 && < 5,
+    monad-control,
+    monad-control-layers,
     readable,
     snap >= 1.0 && < 2,
     snap-core >= 1.0 && < 2,

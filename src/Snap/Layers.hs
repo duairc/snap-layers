@@ -35,8 +35,9 @@ import           Unsafe.Coerce (unsafeCoerce)
 
 -- layers --------------------------------------------------------------------
 import           Control.Monad.Lift
-import           Control.Monad.Lift.IO (controlIO, hoistIO)
 import           Control.Monad.Lift.Base (MonadBase)
+import           Control.Monad.Lift.IO (controlIO, hoistIO)
+import           Control.Monad.Lift.Top (liftT)
 import           Monad.Abort (MonadAbort, abort)
 import           Monad.Mask (MonadMask, getMaskingState, setMaskingState)
 import           Monad.Reader (ask)
@@ -49,12 +50,20 @@ import           Monad.Try (MonadTry, mtry)
 import           Control.Lens.Lens (ALens', (^#), storing)
 
 
+-- monad-control -------------------------------------------------------------
+import           Control.Monad.Trans.Control (MonadBaseControl)
+
+
+-- monad-control-layers ------------------------------------------------------
+import           Control.Monad.Trans.Control.Layers ()
+
+
 -- snap ----------------------------------------------------------------------
 import           Snap.Snaplet (Handler, Initializer, Snaplet)
 
 
 -- snap-core -----------------------------------------------------------------
-import           Snap.Core (Snap, liftSnap)
+import           Snap.Core (Snap, MonadSnap, liftSnap)
 import qualified Snap.Internal.Core as I
 
 
@@ -214,6 +223,19 @@ instance MonadTry Snap where
         from' = from1 . SnapT
         to' m = let SnapT m' = to1 m in m'
     {-# INLINE mtry #-}
+
+
+------------------------------------------------------------------------------
+instance __OVERLAPPABLE__
+    ( MonadSnap m, MonadInner m (t m)
+    , Functor (t m), Applicative (t m), Monad (t m), Alternative (t m)
+    , MonadPlus (t m), MonadIO (t m), MonadBaseControl IO (t m)
+    )
+  =>
+    MonadSnap (t m)
+  where
+    liftSnap = liftT . liftSnap
+    {-# INLINE liftSnap #-}
 
 
 ------------------------------------------------------------------------------
