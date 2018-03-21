@@ -24,6 +24,7 @@ import           Control.Exception (SomeException)
 import           Control.Monad (MonadPlus)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Data.Functor.Identity (Identity (Identity))
+import           Data.IORef (IORef)
 #if !MIN_VERSION_base(4, 8, 0)
 import           Data.Monoid (Monoid, mappend, mempty)
 #endif
@@ -42,6 +43,9 @@ import           Monad.Abort (MonadAbort, abort)
 import           Monad.Mask (MonadMask, getMaskingState, setMaskingState)
 import           Monad.Reader (ask)
 import           Monad.Recover (MonadRecover, recover)
+import           Monad.ST
+                     ( MonadST, newRef, readRef, writeRef, atomicModifyRef
+                     )
 import           Monad.State (get)
 import           Monad.Try (MonadTry, mtry)
 
@@ -217,6 +221,18 @@ instance MonadRecover SomeException Snap where
 
 
 ------------------------------------------------------------------------------
+instance MonadST IORef Snap where
+    newRef = liftIO . newRef
+    {-# INLINE newRef #-}
+    readRef = liftIO . readRef
+    {-# INLINE readRef #-}
+    writeRef = (liftIO .) . writeRef
+    {-# INLINE writeRef #-}
+    atomicModifyRef = (liftIO .) . atomicModifyRef
+    {-# INLINE atomicModifyRef #-}
+
+
+------------------------------------------------------------------------------
 instance MonadTry Snap where
     mtry = from' . fmap (either (Left . from') Right) . mtry . to'
       where
@@ -242,6 +258,24 @@ instance __OVERLAPPABLE__
 instance MonadInner IO (Initializer b v) where
     liftI = liftIO
     {-# INLINE liftI #-}
+
+
+------------------------------------------------------------------------------
+instance MonadAbort SomeException (Initializer b v) where
+    abort = liftIO . abort
+    {-# INLINE abort #-}
+
+
+------------------------------------------------------------------------------
+instance MonadST IORef (Initializer b v) where
+    newRef = liftIO . newRef
+    {-# INLINE newRef #-}
+    readRef = liftIO . readRef
+    {-# INLINE readRef #-}
+    writeRef = (liftIO .) . writeRef
+    {-# INLINE writeRef #-}
+    atomicModifyRef = (liftIO .) . atomicModifyRef
+    {-# INLINE atomicModifyRef #-}
 
 
 ------------------------------------------------------------------------------
@@ -401,6 +435,18 @@ instance MonadMask (Handler b v) where
 instance MonadRecover SomeException (Handler b v) where
     recover a handler = controlIO $ \run -> recover (run a) (run . handler)
     {-# INLINE recover #-}
+
+
+------------------------------------------------------------------------------
+instance MonadST IORef (Handler b v) where
+    newRef = liftIO . newRef
+    {-# INLINE newRef #-}
+    readRef = liftIO . readRef
+    {-# INLINE readRef #-}
+    writeRef = (liftIO .) . writeRef
+    {-# INLINE writeRef #-}
+    atomicModifyRef = (liftIO .) . atomicModifyRef
+    {-# INLINE atomicModifyRef #-}
 
 
 ------------------------------------------------------------------------------
