@@ -40,6 +40,7 @@ library
     lens >= 3.7.6 && < 5,
     monad-control,
     monad-control-layers,
+    mtl >= 2.1 && < 3,
     readable,
     snap >= 1.0 && < 2,
     snap-core >= 1.0 && < 2,

@@ -41,12 +41,12 @@ import           Control.Monad.Lift.IO (controlIO, hoistIO)
 import           Control.Monad.Lift.Top (liftT)
 import           Monad.Abort (MonadAbort, abort)
 import           Monad.Mask (MonadMask, getMaskingState, setMaskingState)
-import           Monad.Reader (ask)
+import           Monad.Reader (MonadReader, reader, ask, local)
 import           Monad.Recover (MonadRecover, recover)
 import           Monad.ST
                      ( MonadST, newRef, readRef, writeRef, atomicModifyRef
                      )
-import           Monad.State (get)
+import           Monad.State (MonadState, state, get, put)
 import           Monad.Try (MonadTry, mtry)
 
 
@@ -60,6 +60,11 @@ import           Control.Monad.Trans.Control (MonadBaseControl)
 
 -- monad-control-layers ------------------------------------------------------
 import           Control.Monad.Trans.Control.Layers ()
+
+
+-- mtl -----------------------------------------------------------------------
+import qualified Control.Monad.Reader.Class as MTL
+import qualified Control.Monad.State.Class as MTL
 
 
 -- snap ----------------------------------------------------------------------
@@ -432,6 +437,16 @@ instance MonadMask (Handler b v) where
 
 
 ------------------------------------------------------------------------------
+instance MonadReader v (Handler b v) where
+    reader = MTL.reader
+    {-# INLINE reader #-}
+    ask = MTL.ask
+    {-# INLINE ask #-}
+    local = MTL.local
+    {-# INLINE local #-}
+
+
+------------------------------------------------------------------------------
 instance MonadRecover SomeException (Handler b v) where
     recover a handler = controlIO $ \run -> recover (run a) (run . handler)
     {-# INLINE recover #-}
@@ -447,6 +462,16 @@ instance MonadST IORef (Handler b v) where
     {-# INLINE writeRef #-}
     atomicModifyRef = (liftIO .) . atomicModifyRef
     {-# INLINE atomicModifyRef #-}
+
+
+------------------------------------------------------------------------------
+instance MonadState v (Handler b v) where
+    state = MTL.state
+    {-# INLINE state #-}
+    get = MTL.get
+    {-# INLINE get #-}
+    put = MTL.put
+    {-# INLINE put #-}
 
 
 ------------------------------------------------------------------------------
