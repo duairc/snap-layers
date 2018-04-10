@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE RankNTypes #-}
 
 module Control.Monad.Lift.Handler
@@ -68,7 +69,8 @@ captureHandler = captureB
 
 ------------------------------------------------------------------------------
 extractHandler :: MonadHandlerControl b v m
-    => proxy m -> OuterResult (Handler b v) m a -> Maybe a
+    => proxy m -> OuterResult (Handler b v) m a
+    -> Either (OuterResult (Handler b v) m b) a
 extractHandler = extractB
 
 

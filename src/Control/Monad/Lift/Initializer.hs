@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE RankNTypes #-}
 
 module Control.Monad.Lift.Initializer
@@ -70,7 +71,8 @@ captureInitializer = captureB
 
 ------------------------------------------------------------------------------
 extractInitializer :: MonadInitializerControl b v m
-    => proxy m -> OuterResult (Initializer b v) m a -> Maybe a
+    => proxy m -> OuterResult (Initializer b v) m a
+    -> Either (OuterResult (Initializer b v) m b) a
 extractInitializer = extractB
 
 

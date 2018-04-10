@@ -19,11 +19,9 @@ where
 import           Control.Applicative (Applicative)
 #endif
 import           Control.Applicative (Alternative)
-import           Control.Arrow ((***))
 import           Control.Exception (SomeException)
 import           Control.Monad (MonadPlus)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
-import           Data.Functor.Identity (Identity (Identity))
 import           Data.IORef (IORef)
 #if !MIN_VERSION_base(4, 8, 0)
 import           Data.Monoid (Monoid, mappend, mempty)
@@ -98,7 +96,6 @@ instance Semigroup Zero where
 ------------------------------------------------------------------------------
 instance Monoid Zero where
     mempty = Zero I.PassOnProcessing
-    {-# INLINE mempty #-}
 
     mappend (Zero I.PassOnProcessing) a = a
     mappend a _ = a
@@ -108,49 +105,45 @@ instance Monoid Zero where
 ------------------------------------------------------------------------------
 newtype SnapT m a = SnapT (ExceptT Zero (StateT I.SnapState m) a)
   deriving
-    ( Functor, Applicative, Alternative, Monad, MonadPlus
+    ( Functor, Applicative, Alternative, Monad, MonadPlus, MonadIO
     )
 
 
 ------------------------------------------------------------------------------
+instance Iso1 (SnapT m) where
+    type Codomain1 (SnapT m) = ExceptT Zero (StateT I.SnapState m)
+    to1 (SnapT m) = m
+    from1 = SnapT
+
+
+------------------------------------------------------------------------------
 instance MonadTrans SnapT where
-    lift = SnapT . lift . lift
-    {-# INLINE lift #-}
+    lift = defaultLift2
 
 
 ------------------------------------------------------------------------------
 instance MInvariant SnapT where
-    hoistiso f _ (SnapT m) = SnapT (hoist (hoist f) m)
-    {-# INLINE hoistiso #-}
+    hoistiso = defaultHoistiso2
 
 
 ------------------------------------------------------------------------------
 instance MFunctor SnapT where
-    hoist f (SnapT m) = SnapT (hoist (hoist f) m)
-    {-# INLINE hoist #-}
+    hoist = defaultHoist2
 
 
 ------------------------------------------------------------------------------
 instance MonadTransControl SnapT where
-    suspend (SnapT (ExceptT (StateT m))) s = m s
-    {-# INLINE suspend #-}
-    resume = SnapT . ExceptT . StateT . const . pure
-    {-# INLINE resume #-}
-    capture = SnapT get
-    {-# INLINE capture #-}
-    extract _ = either (const Nothing) Just
-    {-# INLINE extract #-}
+    suspend = defaultSuspend2
+    resume = defaultResume2
+    capture = defaultCapture2
+    extract = defaultExtract2
 
 
 ------------------------------------------------------------------------------
-type instance LayerResult SnapT = Either Zero
-type instance LayerState SnapT m = I.SnapState
-
-
-------------------------------------------------------------------------------
-instance MonadIO m => MonadIO (SnapT m) where
-    liftIO = lift . liftIO
-    {-# INLINE liftIO #-}
+type instance LayerResult SnapT =
+    DefaultLayerResult2 (ExceptT Zero) (StateT I.SnapState)
+type instance LayerState SnapT =
+    DefaultLayerState2 (ExceptT Zero) (StateT I.SnapState)
 
 
 ------------------------------------------------------------------------------
@@ -174,31 +167,25 @@ instance Iso1 Snap where
 ------------------------------------------------------------------------------
 instance MonadInner IO Snap where
     liftI = liftIO
-    {-# INLINE liftI #-}
 
 
 ------------------------------------------------------------------------------
 instance MonadInnerInvariant IO Snap IO Snap where
     hoistisoI = defaultHoistisoI
-    {-# INLINE hoistisoI #-}
 
 
 ------------------------------------------------------------------------------
 instance MonadInnerFunctor IO Snap IO Snap where
     hoistI = defaultHoistI
-    {-# INLINE hoistI #-}
 
 
 ------------------------------------------------------------------------------
 instance MonadInnerControl IO Snap where
     suspendI = defaultSuspendI
-    {-# INLINE suspendI #-}
     resumeI = defaultResumeI
-    {-# INLINE resumeI #-}
     captureI = defaultCaptureI
-    {-# INLINE captureI #-}
     extractI = defaultExtractI
-    {-# INLINE extractI #-}
+    mapI = defaultMapI
 
 
 ------------------------------------------------------------------------------
@@ -262,7 +249,6 @@ instance __OVERLAPPABLE__
 ------------------------------------------------------------------------------
 instance MonadInner IO (Initializer b v) where
     liftI = liftIO
-    {-# INLINE liftI #-}
 
 
 ------------------------------------------------------------------------------
@@ -291,52 +277,46 @@ instance MonadBase (Initializer b v) (Initializer b v)
 newtype HandlerT b v m a = HandlerT
     (ReaderT (ALens' (Snaplet b) (Snaplet v)) (StateT (Snaplet b) m) a)
   deriving
-    ( Functor, Applicative, Alternative, Monad, MonadPlus
+    ( Functor, Applicative, Alternative, Monad, MonadPlus, MonadIO
     )
 
 
 ------------------------------------------------------------------------------
+instance Iso1 (HandlerT b v m) where
+    type Codomain1 (HandlerT b v m) = ReaderT (ALens' (Snaplet b) (Snaplet v))
+        (StateT (Snaplet b) m)
+    to1 (HandlerT m) = m
+    from1 = HandlerT
+
+
+------------------------------------------------------------------------------
 instance MonadTrans (HandlerT b v) where
-    lift = HandlerT . lift . lift
-    {-# INLINE lift #-}
+    lift = defaultLift2
 
 
 ------------------------------------------------------------------------------
 instance MInvariant (HandlerT b v) where
-    hoistiso f _ (HandlerT m) = HandlerT (hoist (hoist f) m)
-    {-# INLINE hoistiso #-}
+    hoistiso = defaultHoistiso2
 
 
 ------------------------------------------------------------------------------
 instance MFunctor (HandlerT b v) where
-    hoist f (HandlerT m) = HandlerT (hoist (hoist f) m)
-    {-# INLINE hoist #-}
+    hoist = defaultHoist2
 
 
 ------------------------------------------------------------------------------
 instance MonadTransControl (HandlerT b v) where
-    suspend (HandlerT (ReaderT m)) (lens, b) = case m lens of
-        StateT f -> fmap (pure *** (,) lens) (f b)
-    {-# INLINE suspend #-}
-    resume (Identity a, (_, b)) = HandlerT $ ReaderT $ \_ -> StateT $ \_ ->
-        pure (a, b)
-    {-# INLINE resume #-}
-    capture = HandlerT $ (,) <$> ask <*> get
-    {-# INLINE capture #-}
-    extract _ (Identity a) = Just a
-    {-# INLINE extract #-}
+    suspend = defaultSuspend2
+    resume = defaultResume2
+    capture = defaultCapture2
+    extract = defaultExtract2
 
 
 ------------------------------------------------------------------------------
-type instance LayerResult (HandlerT b v) = Identity
-type instance LayerState (HandlerT b v) m =
-    (ALens' (Snaplet b) (Snaplet v), Snaplet b)
-
-
-------------------------------------------------------------------------------
-instance MonadIO m => MonadIO (HandlerT b v m) where
-    liftIO = lift . liftIO
-    {-# INLINE liftIO #-}
+type instance LayerResult (HandlerT b v) = DefaultLayerResult2
+    (ReaderT (ALens' (Snaplet b) (Snaplet v))) (StateT (Snaplet b))
+type instance LayerState (HandlerT b v) = DefaultLayerState2
+    (ReaderT (ALens' (Snaplet b) (Snaplet v))) (StateT (Snaplet b))
 
 
 ------------------------------------------------------------------------------
@@ -361,61 +341,49 @@ instance Iso1 (Handler b v) where
 ------------------------------------------------------------------------------
 instance MonadInner IO (Handler b v) where
     liftI = liftIO
-    {-# INLINE liftI #-}
 
 
 ------------------------------------------------------------------------------
 instance MonadInnerInvariant IO (Handler b v) IO (Handler b v) where
     hoistisoI = defaultHoistisoI
-    {-# INLINE hoistisoI #-}
 
 
 ------------------------------------------------------------------------------
 instance MonadInnerFunctor IO (Handler b v) IO (Handler b v) where
     hoistI = defaultHoistI
-    {-# INLINE hoistI #-}
 
 
 ------------------------------------------------------------------------------
 instance MonadInnerControl IO (Handler b v) where
     suspendI = defaultSuspendI
-    {-# INLINE suspendI #-}
     resumeI = defaultResumeI
-    {-# INLINE resumeI #-}
     captureI = defaultCaptureI
-    {-# INLINE captureI #-}
     extractI = defaultExtractI
-    {-# INLINE extractI #-}
+    mapI = defaultMapI
 
 
 ------------------------------------------------------------------------------
 instance MonadInner Snap (Handler b v) where
     liftI = liftSnap
-    {-# INLINE liftI #-}
 
 
 ------------------------------------------------------------------------------
 instance MonadInnerInvariant Snap (Handler b v) Snap (Handler b v) where
     hoistisoI = defaultHoistisoI
-    {-# INLINE hoistisoI #-}
 
 
 ------------------------------------------------------------------------------
 instance MonadInnerFunctor Snap (Handler b v) Snap (Handler b v) where
     hoistI = defaultHoistI
-    {-# INLINE hoistI #-}
 
 
 ------------------------------------------------------------------------------
 instance MonadInnerControl Snap (Handler b v) where
     suspendI = defaultSuspendI
-    {-# INLINE suspendI #-}
     resumeI = defaultResumeI
-    {-# INLINE resumeI #-}
     captureI = defaultCaptureI
-    {-# INLINE captureI #-}
     extractI = defaultExtractI
-    {-# INLINE extractI #-}
+    mapI = defaultMapI
 
 
 ------------------------------------------------------------------------------
@@ -439,11 +407,8 @@ instance MonadMask (Handler b v) where
 ------------------------------------------------------------------------------
 instance MonadReader v (Handler b v) where
     reader = MTL.reader
-    {-# INLINE reader #-}
     ask = MTL.ask
-    {-# INLINE ask #-}
     local = MTL.local
-    {-# INLINE local #-}
 
 
 ------------------------------------------------------------------------------
@@ -467,11 +432,8 @@ instance MonadST IORef (Handler b v) where
 ------------------------------------------------------------------------------
 instance MonadState v (Handler b v) where
     state = MTL.state
-    {-# INLINE state #-}
     get = MTL.get
-    {-# INLINE get #-}
     put = MTL.put
-    {-# INLINE put #-}
 
 
 ------------------------------------------------------------------------------

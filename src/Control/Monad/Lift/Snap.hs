@@ -2,6 +2,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -73,7 +74,8 @@ captureSnap = captureI (Pm :: Pm Snap)
 
 
 ------------------------------------------------------------------------------
-extractSnap :: MonadSnapControl m => proxy m -> OuterResult Snap m a -> Maybe a
+extractSnap :: MonadSnapControl m => proxy m -> OuterResult Snap m a
+    -> Either (OuterResult Snap m a) a
 extractSnap = extractI (Pm :: Pm Snap)
 
 
