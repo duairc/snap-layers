@@ -12,6 +12,7 @@ build-type:     Simple
 homepage:       https://github.com/duairc/snap-layers
 bug-reports:    https://github.com/duairc/snap-layers/issues
 extra-source-files:
+  include/*.h
   LICENSE
 
 library
